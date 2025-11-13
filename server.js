@@ -23,8 +23,11 @@ app.use('/api/vitals', vitalRoutes);
 app.use('/api/alerts', alertRoutes);
 
 app.use((err, req, res, next) => {
-  console.error(err);
-  res.status(err.status || 500).json({ error: err.message || 'Server error' });
+  console.error(err); 
+  if (err.status >= 400 && err.status < 500) {
+    return res.status(err.status).json({ error: err.message || 'Client error' });
+  }
+  res.status(500).json({ error: 'Server error' });
 });
 
 const PORT = process.env.PORT || 4000;

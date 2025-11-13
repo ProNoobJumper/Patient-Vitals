@@ -33,12 +33,7 @@ exports.register = async (req, res) => {
     await patientDoc.save();
     user.patientRef = patientDoc._id;
 
-    const docUser = await User.findById(doctorId);
-    if (docUser) {
-      docUser.assignedPatients = docUser.assignedPatients || [];
-      docUser.assignedPatients.push(patientDoc._id);
-      await docUser.save();
-    }
+    
   }
 
   await user.save();

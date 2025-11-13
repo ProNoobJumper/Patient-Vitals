@@ -2,8 +2,15 @@ const express = require('express');
 const router = express.Router();
 const { validateRequest } = require('../middleware/validate');
 const Joi = require('joi');
+const rateLimit = require('express-rate-limit');
 
 const authController = require('../controllers/authController');
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20, // Limit each IP to 20 login/register requests per windowMs
+  message: 'Too many requests from this IP, please try again after 15 minutes'
+});
 
 const registerSchema = Joi.object({
   name: Joi.string().required(),
@@ -19,7 +26,7 @@ const loginSchema = Joi.object({
   password: Joi.string().required()
 });
 
-router.post('/register', validateRequest(registerSchema), authController.register);
-router.post('/login', validateRequest(loginSchema), authController.login);
+router.post('/register', apiLimiter, validateRequest(registerSchema), authController.register);
+router.post('/login', apiLimiter, validateRequest(loginSchema), authController.login);
 
 module.exports = router;

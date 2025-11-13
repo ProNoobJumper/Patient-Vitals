@@ -7,16 +7,11 @@ exports.createPatient = async (req, res) => {
   const patient = new Patient({ name, dob, gender, contact, doctor: doctorId, meta });
   await patient.save();
 
-  const doc = await User.findById(doctorId);
-  doc.assignedPatients = doc.assignedPatients || [];
-  doc.assignedPatients.push(patient._id);
-  await doc.save();
-
   res.status(201).json(patient);
 };
 
 exports.getPatientsForDoctor = async (req, res) => {
-  const doctorId = req.user.role === 'doctor' ? req.user._id : req.user.patientRef?.doctor;
+  const doctorId = req.user._id;
   const patients = await Patient.find({ doctor: doctorId });
   res.json(patients);
 };
@@ -26,7 +21,6 @@ exports.getPatientById = async (req, res) => {
   if (!patient) return res.status(404).json({ error: 'Patient not found' });
 
   if (req.user.role === 'doctor' && String(patient.doctor._id) !== String(req.user._id)) {
-    // if doctor not owner, deny
     return res.status(403).json({ error: 'Forbidden' });
   }
   if (req.user.role === 'patient' && String(req.user.patientRef) !== String(patient._id)) {

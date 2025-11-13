@@ -87,6 +87,18 @@ exports.getVitalsForPatient = async (req, res) => {
 exports.statsForPatient = async (req, res) => {
   const { patientId } = req.params;
   const { from, to } = req.query;
+
+  // Authorize user
+  const patient = await Patient.findById(patientId);
+  if (!patient) return res.status(404).json({ error: 'Patient not found' });
+
+  if (req.user.role === 'doctor' && String(patient.doctor) !== String(req.user._id)) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  if (req.user.role === 'patient' && String(req.user.patientRef) !== String(patient._id)) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+
   const match = { patient: require('mongoose').Types.ObjectId(patientId) };
   if (from || to) match.timestamp = {};
   if (from) match.timestamp.$gte = new Date(from);
