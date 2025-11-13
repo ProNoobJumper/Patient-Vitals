@@ -50,7 +50,7 @@ const vitalSchema = Joi.object({
   notes: Joi.string().optional()
 });
 
-router.post('/', protect, validateRequest(vitalSchema), controller.addVital);
+router.post('/', protect, validateRequest({ body: vitalSchema }), controller.addVital);
 router.put('/:id', protect, validateRequest(idParamSchema), controller.updateVital);
 
 router.get('/patient/:patientId', protect, validateRequest(vitalsQuerySchema), controller.getVitalsForPatient);

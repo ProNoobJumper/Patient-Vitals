@@ -13,7 +13,7 @@ exports.addVital = async (req, res) => {
   if (req.user.role === 'doctor' && String(patient.doctor) !== String(req.user._id)) {
     return res.status(403).json({ error: 'Doctor not assigned to this patient' });
   }
-  if (req.user.role === 'patient' && String(req.user.patientRef) !== String(patient._id)) {
+  if (req.user.role === 'patient' && String(req.user.patientRef)   !== String(patient._id)) {
     return res.status(403).json({ error: 'You can only add vitals for your own patient record' });
   }
 
@@ -99,7 +99,7 @@ exports.statsForPatient = async (req, res) => {
     return res.status(403).json({ error: 'Forbidden' });
   }
 
-  const match = { patient: require('mongoose').Types.ObjectId(patientId) };
+ const match = { patient: new (require('mongoose').Types.ObjectId)(patientId) };
   if (from || to) match.timestamp = {};
   if (from) match.timestamp.$gte = new Date(from);
   if (to) match.timestamp.$lte = new Date(to);

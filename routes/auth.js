@@ -26,7 +26,7 @@ const loginSchema = Joi.object({
   password: Joi.string().required()
 });
 
-router.post('/register', apiLimiter, validateRequest(registerSchema), authController.register);
-router.post('/login', apiLimiter, validateRequest(loginSchema), authController.login);
+router.post('/register', apiLimiter, validateRequest({ body: registerSchema }), authController.register);
+router.post('/login', apiLimiter, validateRequest({ body: loginSchema }), authController.login);
 
 module.exports = router;

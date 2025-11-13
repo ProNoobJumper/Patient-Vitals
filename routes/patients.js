@@ -5,15 +5,15 @@ const { validateRequest } = require('../middleware/validate');
 const { protect, authorizeRoles } = require('../middleware/auth');
 const controller = require('../controllers/patientController');
 
-router.post('/', protect, authorizeRoles('doctor'), validateRequest(
-  Joi.object({
+router.post('/', protect, authorizeRoles('doctor'), validateRequest({
+  body: Joi.object({
     name: Joi.string().required(),
     dob: Joi.date().optional(),
     gender: Joi.string().valid('male','female','other').optional(),
     contact: Joi.string().optional(),
     meta: Joi.object().optional()
   })
-), controller.createPatient);
+}), controller.createPatient);
 
 router.get('/', protect, authorizeRoles('doctor'), controller.getPatientsForDoctor);
 
