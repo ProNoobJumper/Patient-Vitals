@@ -68,10 +68,10 @@
           <!-- subtle inner glass -->
           <circle cx="200" cy="200" r="120" fill="none" stroke="#f3f4f6" stroke-width="4" opacity="0.6" />
         </svg>
-        <div class="hero-copy">
-          <h1 class="hero-title">Patient Vitals Tracker</h1>
-          <div class="loading-tip">Scroll down to continue</div>
-          <button id="scrollNext" class="scroll-cue linklike" aria-label="Scroll to login section">Scroll to login ↓</button>
+        <div class="hero-copy" style="display: block !important; visibility: visible !important; opacity: 1 !important;">
+          <h1 class="hero-title" style="display: block !important; visibility: visible !important; opacity: 1 !important;">Patient Vitals Tracker</h1>
+          <div class="loading-tip" style="display: block !important; visibility: visible !important; opacity: 1 !important;">Scroll down to continue</div>
+          <button id="scrollNext" class="scroll-cue linklike" style="display: inline-block !important; visibility: visible !important; opacity: 1 !important;" aria-label="Scroll to login section">Scroll to login ↓</button>
         </div>
       </div>
     </div>
@@ -91,33 +91,13 @@
         <a href="#/dashboard" data-route data-tab="dashboard">Dashboard</a>
         <a href="#/profile" data-route data-tab="profile">Profile</a>
         <a href="#/about" data-route data-tab="about">About</a>
+        <button id="addPatientBtn" class="linklike" title="Add new patient">Add patient</button>
         <button id="logoutBtn" class="linklike" title="Logout">Logout</button>
       </nav>
       <div id="doctorName" class="doctor"></div>
     </header>
 
     <main id="app">
-      <!-- Role Selection View -->
-      <section id="role-view" class="view">
-        <div class="card" style="text-align:center">
-          <h2>Continue as</h2>
-          <div class="role-grid">
-            <div class="role-card">
-              <div class="role-icon">🩺</div>
-              <h3>Doctor</h3>
-              <p class="muted-text">Access your assigned patients and monitor vitals.</p>
-              <button id="chooseDoctor" class="btn primary">Doctor Login</button>
-            </div>
-            <div class="role-card">
-              <div class="role-icon">🙂</div>
-              <h3>Patient</h3>
-              <p class="muted-text">Sign in or register to view your records.</p>
-              <button id="choosePatient" class="btn">Patient Login / Register</button>
-            </div>
-          </div>
-        </div>
-      </section>
-
       <!-- Login View -->
       <section id="login-view" class="view">
         <!-- Decorative medical background illustration -->
@@ -173,13 +153,6 @@
             </div>
           </form>
 
-        </div>
-      </section>
-
-      <!-- Patient Auth View (iframe wrapped) -->
-      <section id="patient-auth-view" class="view hidden">
-        <div class="card" style="padding:0">
-          <iframe src="patient-auth/index.html" title="Patient Login / Register" style="width:100%;height:560px;border:0;border-radius:12px"></iframe>
         </div>
       </section>
 
@@ -262,16 +235,30 @@
             <div id="alerts" class="alerts"></div>
           </div>
           <div class="card">
-            <h3>Blood Pressure</h3>
-            <canvas id="bpChart" height="120"></canvas>
-          </div>
-          <div class="card">
-            <h3>Sugar Level</h3>
-            <canvas id="sugarChart" height="120"></canvas>
-          </div>
-          <div class="card">
-            <h3>Pulse</h3>
-            <canvas id="pulseChart" height="120"></canvas>
+            <h3>Update or Add Vital Reading</h3>
+            <form id="vitalForm" class="form" onsubmit="return false;">
+              <div class="grid-2">
+                <label>Systolic (mmHg)
+                  <input type="number" id="vital_sys" min="0" step="1" placeholder="e.g. 120" />
+                </label>
+                <label>Diastolic (mmHg)
+                  <input type="number" id="vital_dia" min="0" step="1" placeholder="e.g. 80" />
+                </label>
+                <label>Sugar (mg/dL)
+                  <input type="number" id="vital_sugar" min="0" step="1" placeholder="e.g. 110" />
+                </label>
+                <label>Pulse (bpm)
+                  <input type="number" id="vital_pulse" min="0" step="1" placeholder="e.g. 72" />
+                </label>
+              </div>
+              <label>Notes
+                <input type="text" id="vital_notes" placeholder="Optional comment" />
+              </label>
+              <div class="btn-row">
+                <button id="saveVitalBtn" type="submit" class="btn primary">Add New Reading</button>
+                <button id="updateVitalBtn" type="button" class="btn">Update Current Reading</button>
+              </div>
+            </form>
           </div>
         </div>
       </section>
@@ -287,9 +274,45 @@
         </div>
       </section>
 
+      <!-- Add Patient Modal -->
+      <div id="addPatientModal" class="modal hidden" aria-hidden="true">
+        <div class="modal-backdrop" id="addPatientBackdrop"></div>
+        <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="addPatientTitle">
+          <div class="modal-header">
+            <h2 id="addPatientTitle">Add New Patient</h2>
+            <button id="closeAddPatient" class="linklike" type="button">✕</button>
+          </div>
+          <form id="addPatientForm" class="modal-body">
+            <label>Name
+              <input type="text" id="ap_name" required placeholder="Patient full name" />
+            </label>
+            <label>Date of birth
+              <input type="date" id="ap_dob" />
+            </label>
+            <label>Gender
+              <select id="ap_gender">
+                <option value="">Select…</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="other">Other</option>
+              </select>
+            </label>
+            <label>Contact
+              <input type="text" id="ap_contact" placeholder="Phone or email" />
+            </label>
+            <label>MRN
+              <input type="text" id="ap_mrn" placeholder="Medical record number" />
+            </label>
+            <div class="btn-row" style="margin-top: 12px;">
+              <button type="submit" class="btn primary">Save patient</button>
+              <button type="button" id="cancelAddPatient" class="btn">Cancel</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
     </main>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" integrity="sha384-z3rGfJmCEWHlLAx4I65c4fQGuhg5pY0pxX0nCAm6d2mJb9+o5Rr7Sx+7pQF1uS4c" crossorigin="anonymous"></script>
     <script src="./app.js"></script>
   </body>
 </html>

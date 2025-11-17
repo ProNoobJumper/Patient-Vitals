@@ -8,17 +8,14 @@ const authController = require('../controllers/authController');
 
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 20, // Limit each IP to 20 login/register requests per windowMs
+  max: process.env.AUTH_RATE_LIMIT_MAX ? parseInt(process.env.AUTH_RATE_LIMIT_MAX, 10) : 1000,
   message: 'Too many requests from this IP, please try again after 15 minutes'
 });
 
 const registerSchema = Joi.object({
   name: Joi.string().required(),
   email: Joi.string().email().required(),
-  password: Joi.string().min(6).required(),
-  role: Joi.string().valid('doctor','patient').required(),
-  doctorId: Joi.string().optional(),
-  patientInfo: Joi.object().optional()
+  password: Joi.string().min(6).required()
 });
 
 const loginSchema = Joi.object({
@@ -28,5 +25,6 @@ const loginSchema = Joi.object({
 
 router.post('/register', apiLimiter, validateRequest({ body: registerSchema }), authController.register);
 router.post('/login', apiLimiter, validateRequest({ body: loginSchema }), authController.login);
+router.get('/get-doctor', authController.getDoctor);
 
 module.exports = router;

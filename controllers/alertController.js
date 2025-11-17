@@ -9,12 +9,6 @@ exports.listAlertsForDoctor = async (req, res) => {
   res.json(alerts);
 };
 
-exports.listAlertsForPatient = async (req, res) => {
-  const patientId = req.user.patientRef;
-  if (!patientId) return res.status(400).json({ error: 'No patient record' });
-  const alerts = await Alert.find({ patient: patientId }).sort({ createdAt: -1 });
-  res.json(alerts);
-};
 
 exports.acknowledgeAlert = async (req, res) => {
   const alert = await Alert.findById(req.params.id);
@@ -22,7 +16,7 @@ exports.acknowledgeAlert = async (req, res) => {
 
   const PatientModel = require('../models/Patient');
   const patient = await PatientModel.findById(alert.patient);
-  if (req.user.role === 'doctor' && String(patient.doctor) !== String(req.user._id)) {
+  if (String(patient.doctor) !== String(req.user._id)) {
     return res.status(403).json({ error: 'Forbidden' });
   }
   alert.acknowledged = true;
