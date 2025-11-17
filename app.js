@@ -12,15 +12,63 @@
     token: localStorage.getItem('doctorToken') || null,
     patients: [], // Will be loaded from API
     firstLoad: true,
+    currentPatientId: null,
+    currentVitalId: null,
   };
 
-  const roleView = $('#role-view');
+  const splash = document.getElementById('splash');
   const loginView = $('#login-view');
-  const patientAuthView = $('#patient-auth-view');
   const dashView = $('#dashboard-view');
   const patientView = $('#patient-view');
   const profileView = $('#profile-view');
   const aboutView = $('#about-view');
+  const scrollNextBtn = $('#scrollNext');
+  const addPatientBtn = $('#addPatientBtn');
+  const addPatientModal = $('#addPatientModal');
+  const addPatientForm = $('#addPatientForm');
+  const closeAddPatient = $('#closeAddPatient');
+  const cancelAddPatient = $('#cancelAddPatient');
+  const addPatientBackdrop = $('#addPatientBackdrop');
+
+  // Smooth scroll from splash CTA to login form
+  if (scrollNextBtn) {
+    scrollNextBtn.addEventListener('click', () => {
+      const loginSection = document.getElementById('login-view');
+      if (loginSection) {
+        loginSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      // Also focus the email field for faster login
+      const emailInput = document.getElementById('email');
+      if (emailInput) {
+        emailInput.focus();
+      }
+    });
+  }
+
+  // Add Patient modal controls
+  function showAddPatientModal(){
+    if (!addPatientModal) return;
+    addPatientModal.classList.remove('hidden');
+  }
+
+  function hideAddPatientModal(){
+    if (!addPatientModal) return;
+    addPatientModal.classList.add('hidden');
+  }
+
+  if (addPatientBtn) {
+    addPatientBtn.addEventListener('click', () => {
+      if (!state.token) {
+        window.location.hash = '#/login';
+        return;
+      }
+      showAddPatientModal();
+    });
+  }
+
+  [closeAddPatient, cancelAddPatient, addPatientBackdrop].forEach(el => {
+    if (el) el.addEventListener('click', hideAddPatientModal);
+  });
 
   // Login handling (real auth)
   async function handleLogin(e){
@@ -94,12 +142,18 @@
   const lb = $('#loginBtn');
   if(lb){ lb.addEventListener('click', handleLogin); }
 
+  if (addPatientForm) {
+    addPatientForm.addEventListener('submit', handleAddPatientSubmit);
+  }
+
   $('#logoutBtn').addEventListener('click', ()=>{
     state.user = null;
     state.token = null;
     localStorage.removeItem('doctorUser');
     localStorage.removeItem('doctorToken');
     updateHeader();
+    if (splash) splash.style.display = 'block';
+    window.scrollTo({ top: 0, behavior: 'auto' });
     window.location.hash = '#/login';
   });
 
@@ -125,26 +179,25 @@
   function showView(page, id){
     const authed = !!state.token;
     // Hide all views first
-    roleView && roleView.classList.add('hidden');
     loginView && loginView.classList.add('hidden');
-    patientAuthView && patientAuthView.classList.add('hidden');
     aboutView && aboutView.classList.add('hidden');
     dashView.classList.add('hidden');
     patientView.classList.add('hidden');
     profileView.classList.add('hidden');
 
     if(!authed){
-      // Landing mode: show Role chooser first; reveal others only when requested
-      roleView && roleView.classList.remove('hidden');
-      if(page === 'login'){ loginView.classList.remove('hidden'); initLoginBot(); }
-      if(page === 'patient-auth'){ patientAuthView.classList.remove('hidden'); }
+      // Unauthenticated: show login + splash
+      if (splash) splash.style.display = 'block';
+      loginView.classList.remove('hidden'); 
+      initLoginBot();
       if(page === 'about'){ aboutView.classList.remove('hidden'); }
       return;
     }
 
-    // Authenticated: hide landing sections
-    aboutView && aboutView.classList.add('hidden');
+    // Authenticated: hide login view and splash hero
     loginView && loginView.classList.add('hidden');
+    if (splash) splash.style.display = 'none';
+    window.scrollTo({ top: 0, behavior: 'auto' });
 
     switch(page){
       case 'dashboard':
@@ -158,32 +211,17 @@
       case 'profile':
         profileView.classList.remove('hidden');
         break;
+      case 'about':
+        aboutView && aboutView.classList.remove('hidden');
+        break;
       default:
         dashView.classList.remove('hidden');
-        renderDashboard();
         window.location.hash = '#/dashboard';
     }
   }
 
   // Initial route
   route();
-
-  // Smooth scroll from hero to role chooser
-  document.getElementById('scrollNext')?.addEventListener('click', ()=>{
-    const el = document.getElementById('role-view');
-    el?.scrollIntoView({behavior:'smooth', block:'start'});
-  });
-
-  // Role buttons
-  document.getElementById('chooseDoctor')?.addEventListener('click', ()=>{
-    window.location.hash = '#/login';
-    setTimeout(()=> document.getElementById('login-view')?.scrollIntoView({behavior:'smooth'}), 0);
-  });
-  document.getElementById('choosePatient')?.addEventListener('click', ()=>{
-    window.location.hash = '#/patient-auth';
-    setTimeout(()=> document.getElementById('patient-auth-view')?.scrollIntoView({behavior:'smooth'}), 0);
-  });
-
 
   // Dashboard rendering
   $('#search').addEventListener('input', renderDashboard);
@@ -200,29 +238,41 @@
   function patientCard(p){
     const el = document.createElement('div');
     el.className = 'card pcard';
-    
-    // Backend patient schema has name, dob, gender, contact
-    const dob = p.dob ? new Date(p.dob).toLocaleDateString() : 'N/A';
-    
+
     el.innerHTML = `
       <div class="row">
         <div>
           <div style="font-weight:700">${p.name}</div>
           <div class="small">MRN: ${p._id}</div>
         </div>
-        </div>
+        <span class="pill status-pill">
+          <span class="dot"></span>
+          <span class="label">—</span>
+        </span>
+      </div>
       <div class="metric-grid" style="min-height: 80px; align-content: center; padding: 1.25rem 0;">
         <div class="metric">
-          <div class="label">Gender</div>
-          <div class="value" style="font-size: 1.1rem;">${p.gender || 'N/A'}</div>
+          <div class="label">BP</div>
+          <div class="value"><span data-bp>—</span></div>
+          <div class="unit">mmHg</div>
         </div>
         <div class="metric">
-          <div class="label">DOB</div>
-          <div class="value" style="font-size: 1.1rem;">${dob}</div>
+          <div class="label">Sugar</div>
+          <div class="value"><span data-sugar>—</span></div>
+          <div class="unit">mg/dL</div>
+        </div>
+        <div class="metric">
+          <div class="label">Pulse</div>
+          <div class="value"><span data-pulse>—</span></div>
+          <div class="unit">bpm</div>
         </div>
       </div>
-      <div class="card-foot">Contact: ${p.contact || 'N/A'}</div>
+      <div class="card-foot small" data-updated>Updated —</div>
     `;
+
+    // Async load of latest vitals for this patient
+    loadLatestVitalForCard(p, el);
+
     el.style.cursor = 'pointer';
     el.addEventListener('click', ()=>{
       window.location.hash = `#/patient/${p._id}`;
@@ -230,17 +280,82 @@
     return el;
   }
 
+  async function loadLatestVitalForCard(patient, cardEl){
+    if (!state.token) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/vitals/patient/${patient._id}?limit=1`, {
+        headers: { 'Authorization': `Bearer ${state.token}` }
+      });
+      if (!res.ok) {
+        // Leave placeholders if vitals cannot be loaded
+        return;
+      }
+      const arr = await res.json();
+      if (!Array.isArray(arr) || arr.length === 0) {
+        const upd = cardEl.querySelector('[data-updated]');
+        if (upd) upd.textContent = 'No vitals yet';
+        const pill = cardEl.querySelector('.status-pill');
+        const labelEl = pill && pill.querySelector('.label');
+        if (pill && labelEl) {
+          pill.className = 'pill status-pill warn';
+          labelEl.textContent = 'No data';
+        }
+        return;
+      }
+
+      const v = arr[0];
+      const read = {
+        bp: {
+          sys: v.bloodPressure?.systolic ?? null,
+          dia: v.bloodPressure?.diastolic ?? null,
+        },
+        sugar: v.sugarMgDl ?? null,
+        pulse: v.pulse ?? null,
+      };
+
+      const bpSpan = cardEl.querySelector('[data-bp]');
+      const sugarSpan = cardEl.querySelector('[data-sugar]');
+      const pulseSpan = cardEl.querySelector('[data-pulse]');
+      if (bpSpan) {
+        bpSpan.textContent =
+          read.bp.sys != null && read.bp.dia != null
+            ? `${read.bp.sys}/${read.bp.dia}`
+            : '—';
+      }
+      if (sugarSpan) sugarSpan.textContent = read.sugar != null ? read.sugar : '—';
+      if (pulseSpan) pulseSpan.textContent = read.pulse != null ? read.pulse : '—';
+
+      const level = alertLevel(read); // 'ok' | 'warn' | 'crit'
+      const pill = cardEl.querySelector('.status-pill');
+      const labelEl = pill && pill.querySelector('.label');
+      if (pill && labelEl) {
+        pill.className = `pill status-pill ${level}`;
+        labelEl.textContent = levelLabel(level);
+      }
+
+      const updatedEl = cardEl.querySelector('[data-updated]');
+      if (updatedEl && v.timestamp) {
+        const d = new Date(v.timestamp);
+        updatedEl.textContent = timeAgoLabel(d);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
   // Patient view
-  let charts = {};
+  let vitalFormInited = false;
   async function renderPatient(id){
     if (!state.token) {
       return showView('login');
     }
   
-    // Clear previous patient's charts
-    charts.bp && charts.bp.destroy();
-    charts.sugar && charts.sugar.destroy();
-    charts.pulse && charts.pulse.destroy();
+    state.currentPatientId = id;
+
+    // Ensure form handler is wired once
+    initVitalForm();
+
+    // Clear previous patient's state
     $('#alerts').innerHTML = '';
     $('#currentReadings').innerHTML = '';
 
@@ -260,11 +375,15 @@
       if (vitalsRes.status === 401) return $('#logoutBtn').click();
       if (!vitalsRes.ok) throw new Error('Failed to load patient vitals.');
       const backendVitals = await vitalsRes.json();
+
+      // Track latest vital for update form
+      state.currentVitalId = backendVitals.length ? backendVitals[0]._id : null;
   
       // 3. Map backend vitals to frontend history format
       // Backend: { timestamp, bloodPressure: { systolic, diastolic }, sugarMgDl, pulse }
       // Frontend: { time, bp: { sys, dia }, sugar, pulse }
       const history = backendVitals.map(v => ({
+        id: v._id,
         time: v.timestamp,
         bp: { 
           sys: v.bloodPressure?.systolic, 
@@ -276,7 +395,7 @@
       })).sort((a, b) => new Date(a.time) - new Date(b.time)); // Ensure sorted
   
       // 4. Start rendering
-      $('#patientHeader').innerHTML = `<h2>${p.name}</h2><div class="small">ID: ${p._id}</div>`;
+      $('#patientHeader').innerHTML = `<div><h2>${p.name}</h2><div class="small">MRN: ${p._id}</div></div><span id="patientStatusPill" class="pill"><span class="dot"></span><span class="label"></span></span>`;
 
       if (!history.length) {
          $('#alerts').appendChild(alert('No vitals recorded for this patient yet.', 'warn'));
@@ -285,11 +404,27 @@
   
       // 5. Continue with existing render logic, using fetched data
       const latest = history[history.length-1];
+
+      // Status pill in header based on latest reading
+      const level = alertLevel(latest);
+      const pill = document.getElementById('patientStatusPill');
+      if (pill) {
+        pill.className = `pill ${level}`;
+        const labelEl = pill.querySelector('.label');
+        const dotEl = pill.querySelector('.dot');
+        if (labelEl) labelEl.textContent = levelLabel(level);
+        if (dotEl) dotEl.className = `dot ${level}`;
+      }
+
+      // Current vitals card
       $('#currentReadings').innerHTML = `
         ${stat('Blood Pressure', `${latest.bp.sys || 'N/A'}/${latest.bp.dia || 'N/A'} mmHg`)}
         ${stat('Sugar', `${latest.sugar || 'N/A'} mg/dL`)}
         ${stat('Pulse', `${latest.pulse || 'N/A'} bpm`)}
       `;
+
+      // Prefill form with latest readings so doctor can update
+      prefillVitalFormFromLatest(backendVitals[0]);
   
       // Alerts
       const msgs = detectAlerts(history);
@@ -299,45 +434,171 @@
       } else {
         msgs.forEach(m => alerts.appendChild(alert(m.message, m.level)));
       }
-  
-      // Charts
-      const labels = history.map(h=> new Date(h.time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}));
-      const bpSys = history.map(h=>h.bp.sys);
-      const bpDia = history.map(h=>h.bp.dia);
-      const sugar = history.map(h=>h.sugar);
-      const pulse = history.map(h=>h.pulse);
-  
-      const gridColor = '#e5e7eb';
-  
-      charts.bp = new Chart($('#bpChart'), {
-        type: 'line',
-        data: { labels, datasets:[
-          {label: 'Systolic', data: bpSys, borderColor:'#2563eb', tension:.35},
-          {label: 'Diastolic', data: bpDia, borderColor:'#10b981', tension:.35}
-        ]},
-        options: baseChartOptions(gridColor, [120, 80])
-      });
-  
-      charts.sugar = new Chart($('#sugarChart'), {
-        type: 'line',
-        data: { labels, datasets:[
-          {label: 'Glucose (mg/dL)', data: sugar, borderColor:'#f59e0b', tension:.35}
-        ]},
-        options: baseChartOptions(gridColor, [200, 70])
-      });
-  
-      charts.pulse = new Chart($('#pulseChart'), {
-        type: 'line',
-        data: { labels, datasets:[
-          {label: 'Pulse (bpm)', data: pulse, borderColor:'#ef4444', tension:.35}
-        ]},
-        options: baseChartOptions(gridColor, [120, 50])
-      });
-  
+
     } catch (err) {
        console.error(err);
        alert(err.message);
     }
+  }
+
+  function initVitalForm(){
+    if (vitalFormInited) return;
+    const form = document.getElementById('vitalForm');
+    if (!form) return;
+    vitalFormInited = true;
+    form.addEventListener('submit', handleVitalSubmit);
+    const updateBtn = document.getElementById('updateVitalBtn');
+    if (updateBtn) updateBtn.addEventListener('click', handleVitalUpdate);
+  }
+
+  async function handleVitalSubmit(e){
+    e.preventDefault();
+    if (!state.token || !state.currentPatientId) {
+      alert('Please log in again.');
+      return;
+    }
+    const sysEl = document.getElementById('vital_sys');
+    const diaEl = document.getElementById('vital_dia');
+    const sugarEl = document.getElementById('vital_sugar');
+    const pulseEl = document.getElementById('vital_pulse');
+    const notesEl = document.getElementById('vital_notes');
+    const btn = document.getElementById('saveVitalBtn');
+
+    const bpSys = sysEl.value ? Number(sysEl.value) : undefined;
+    const bpDia = diaEl.value ? Number(diaEl.value) : undefined;
+    const sugar = sugarEl.value ? Number(sugarEl.value) : undefined;
+    const pulse = pulseEl.value ? Number(pulseEl.value) : undefined;
+    const notes = notesEl.value.trim() || undefined;
+
+    if (bpSys == null && bpDia == null && sugar == null && pulse == null) {
+      alert('Enter at least one vital value to save.');
+      return;
+    }
+
+    const payload = {
+      patient: state.currentPatientId,
+      bloodPressure: {
+        ...(bpSys != null ? { systolic: bpSys } : {}),
+        ...(bpDia != null ? { diastolic: bpDia } : {}),
+      },
+      ...(sugar != null ? { sugarMgDl: sugar } : {}),
+      ...(pulse != null ? { pulse } : {}),
+      ...(notes ? { notes } : {}),
+    };
+
+    try {
+      btn.classList.add('loading');
+      const res = await fetch(`${API_BASE_URL}/vitals`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${state.token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || (data.errors && data.errors.join(', ')) || 'Failed to save vital');
+      }
+
+      // Clear inputs for next entry
+      sysEl.value = '';
+      diaEl.value = '';
+      sugarEl.value = '';
+      pulseEl.value = '';
+      notesEl.value = '';
+
+      // Re-render patient to pull updated vitals & charts
+      renderPatient(state.currentPatientId);
+    } catch (err) {
+      console.error(err);
+      alert(err.message);
+    } finally {
+      btn.classList.remove('loading');
+    }
+  }
+
+  async function handleVitalUpdate(){
+    if (!state.token || !state.currentPatientId || !state.currentVitalId) {
+      alert('No current reading to update. Please add a reading first.');
+      return;
+    }
+
+    const sysEl = document.getElementById('vital_sys');
+    const diaEl = document.getElementById('vital_dia');
+    const sugarEl = document.getElementById('vital_sugar');
+    const pulseEl = document.getElementById('vital_pulse');
+    const notesEl = document.getElementById('vital_notes');
+    const btn = document.getElementById('updateVitalBtn');
+
+    const bpSys = sysEl.value ? Number(sysEl.value) : undefined;
+    const bpDia = diaEl.value ? Number(diaEl.value) : undefined;
+    const sugar = sugarEl.value ? Number(sugarEl.value) : undefined;
+    const pulse = pulseEl.value ? Number(pulseEl.value) : undefined;
+    const notes = notesEl.value.trim() || undefined;
+
+    if (bpSys == null && bpDia == null && sugar == null && pulse == null && !notes) {
+      alert('Enter at least one value to update.');
+      return;
+    }
+
+    const payload = {
+      bloodPressure: {
+        ...(bpSys != null ? { systolic: bpSys } : {}),
+        ...(bpDia != null ? { diastolic: bpDia } : {}),
+      },
+      ...(sugar != null ? { sugarMgDl: sugar } : {}),
+      ...(pulse != null ? { pulse } : {}),
+      ...(notes ? { notes } : {}),
+    };
+
+    try {
+      btn.classList.add('loading');
+      const res = await fetch(`${API_BASE_URL}/vitals/${state.currentVitalId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${state.token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || (data.errors && data.errors.join(', ')) || 'Failed to update vital');
+      }
+
+      // Refresh detail view
+      renderPatient(state.currentPatientId);
+    } catch (err) {
+      console.error(err);
+      alert(err.message);
+    } finally {
+      btn.classList.remove('loading');
+    }
+  }
+
+  function prefillVitalFormFromLatest(v){
+    const sysEl = document.getElementById('vital_sys');
+    const diaEl = document.getElementById('vital_dia');
+    const sugarEl = document.getElementById('vital_sugar');
+    const pulseEl = document.getElementById('vital_pulse');
+    const notesEl = document.getElementById('vital_notes');
+    if (!sysEl || !diaEl || !sugarEl || !pulseEl || !notesEl) return;
+
+    if (!v) {
+      sysEl.value = '';
+      diaEl.value = '';
+      sugarEl.value = '';
+      pulseEl.value = '';
+      notesEl.value = '';
+      return;
+    }
+
+    sysEl.value = v.bloodPressure?.systolic ?? '';
+    diaEl.value = v.bloodPressure?.diastolic ?? '';
+    sugarEl.value = v.sugarMgDl ?? '';
+    pulseEl.value = v.pulse ?? '';
+    notesEl.value = v.notes ?? '';
   }
 
   function setActiveTab(page){
@@ -378,6 +639,68 @@
         } : undefined
       }
     };
+  }
+
+  async function handleAddPatientSubmit(e){
+    e.preventDefault();
+    if (!state.token) {
+      alert('Please log in again.');
+      return;
+    }
+
+    const nameEl = document.getElementById('ap_name');
+    const dobEl = document.getElementById('ap_dob');
+    const genderEl = document.getElementById('ap_gender');
+    const contactEl = document.getElementById('ap_contact');
+    const mrnEl = document.getElementById('ap_mrn');
+
+    const name = nameEl.value.trim();
+    const dob = dobEl.value;
+    const gender = genderEl.value;
+    const contact = contactEl.value.trim();
+    const mrn = mrnEl.value.trim();
+
+    if (!name) {
+      alert('Name is required');
+      return;
+    }
+
+    const payload = {
+      name,
+      ...(dob ? { dob } : {}),
+      ...(gender ? { gender } : {}),
+      ...(contact ? { contact } : {}),
+      ...(mrn ? { meta: { mrn } } : {}),
+    };
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/patients`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${state.token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || (data.errors && data.errors.join(', ')) || 'Failed to create patient');
+      }
+
+      hideAddPatientModal();
+      // Clear fields
+      nameEl.value = '';
+      dobEl.value = '';
+      genderEl.value = '';
+      contactEl.value = '';
+      mrnEl.value = '';
+
+      // Refresh dashboard list
+      fetchPatients();
+    } catch (err) {
+      console.error(err);
+      alert(err.message);
+    }
   }
 
   function stat(label, value){
@@ -426,6 +749,15 @@
       if(pulseRise) alerts.push({ level:'warn', message:'Gradual increase in pulse detected.'});
     }
     return alerts;
+  }
+
+  function timeAgoLabel(date){
+    const diffMs = Date.now() - date.getTime();
+    if (diffMs < 60 * 1000) return 'Updated just now';
+    const mins = Math.round(diffMs / (60 * 1000));
+    if (mins < 60) return `Updated ${mins} minute${mins === 1 ? '' : 's'} ago`;
+    const hours = Math.round(mins / 60);
+    return `Updated about ${hours} hour${hours === 1 ? '' : 's'} ago`;
   }
   
 })();

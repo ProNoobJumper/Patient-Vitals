@@ -32,5 +32,12 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 4000;
 connectDB().then(() => {
-  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+  const server = app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(`Error: Port ${PORT} is already in use. Is the server already running in another terminal?`);
+      process.exit(1);
+    }
+  });
 });

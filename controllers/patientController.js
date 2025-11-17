@@ -20,10 +20,7 @@ exports.getPatientById = async (req, res) => {
   const patient = await Patient.findById(req.params.id).populate('doctor', 'name email');
   if (!patient) return res.status(404).json({ error: 'Patient not found' });
 
-  if (req.user.role === 'doctor' && String(patient.doctor._id) !== String(req.user._id)) {
-    return res.status(403).json({ error: 'Forbidden' });
-  }
-  if (req.user.role === 'patient' && String(req.user.patientRef) !== String(patient._id)) {
+  if (String(patient.doctor._id) !== String(req.user._id)) {
     return res.status(403).json({ error: 'Forbidden' });
   }
 

@@ -11,10 +11,6 @@ A comprehensive web application for monitoring patient vital signs including Blo
 - **Trend Analysis**: Visual charts showing patient health trends over time
 - **Quick Search**: Search patients by name or Medical Record Number (MRN)
 
-### For Patients
-- **Personal Health Records**: View your own vital signs history
-- **Visual Analytics**: Charts and graphs of your health metrics
-- **Alert Notifications**: Stay informed about concerning vital readings
 
 ### Technical Features
 - 🎨 **Modern UI**: Animated splash screen with medical-themed SVG graphics
@@ -56,12 +52,11 @@ cd patient-vitals-tracker
 
 ### 2. Backend Setup
 ```bash
-cd backend
 npm install
 ```
 
 ### 3. Environment Configuration
-Create a `.env` file in the backend directory:
+Create a `.env` file in the project root directory:
 
 ```env
 PORT=4000
@@ -94,14 +89,13 @@ docker run -d -p 27017:27017 --name mongodb mongo:latest
 
 ### 5. Start the Backend Server
 ```bash
-cd backend
-node server.js
+npm run dev   # or: node server.js
 ```
 
 The API will run on `http://localhost:4000`
 
 ### 6. Frontend Setup
-Simply open `frontend.txt` (rename to `index.html`) in a web browser, or use a local server:
+Simply open `index.html` in the project root in a web browser, or use a local server:
 
 ```bash
 # Using Python
@@ -120,7 +114,22 @@ Access the application at `http://localhost:8000`
 
 ### Authentication Endpoints
 
-#### Register User
+#### Default development doctor
+
+During development you can auto-create (or fetch) a doctor by calling:
+
+```http
+GET /api/auth/get-doctor
+```
+
+This ensures there is at least one doctor user with:
+
+- Email: `dr.smith@example.com`
+- Password: `password`
+
+Use these credentials on the web UI login screen unless you register your own doctor account.
+
+#### Register Doctor
 ```http
 POST /api/auth/register
 Content-Type: application/json
@@ -128,30 +137,10 @@ Content-Type: application/json
 {
   "name": "Dr. John Smith",
   "email": "doctor@hospital.com",
-  "password": "securePassword123",
-  "role": "doctor"
+  "password": "securePassword123"
 }
 ```
 
-#### Register Patient
-```http
-POST /api/auth/register
-Content-Type: application/json
-
-{
-  "name": "Jane Doe",
-  "email": "jane@email.com",
-  "password": "securePassword123",
-  "role": "patient",
-  "doctorId": "doctor_mongodb_id",
-  "patientInfo": {
-    "name": "Jane Doe",
-    "dob": "1990-05-15",
-    "gender": "female",
-    "contact": "+1234567890"
-  }
-}
-```
 
 #### Login
 ```http
@@ -259,12 +248,6 @@ GET /api/alerts
 Authorization: Bearer {token}
 ```
 
-#### Get My Alerts (Patient)
-```http
-GET /api/alerts/me
-Authorization: Bearer {token}
-```
-
 #### Acknowledge Alert (Doctor)
 ```http
 POST /api/alerts/:id/ack
@@ -287,13 +270,6 @@ Authorization: Bearer {token}
    - Trend alerts
    - Alert notifications
 
-### For Patients
-
-1. **Register**: Create account with assigned doctor's ID
-2. **Login**: Access your personal health dashboard
-3. **View Records**: See your vital signs history
-4. **Track Trends**: Monitor your health progress over time
-
 ### Alert Thresholds
 
 The system automatically generates alerts based on these thresholds:
@@ -309,40 +285,34 @@ The system automatically generates alerts based on these thresholds:
 
 ```
 patient-vitals-tracker/
-├── frontend/
-│   ├── index.html              # Main HTML file
-│   ├── styles.css              # Styling
-│   ├── app.js                  # Frontend logic
-│   └── patient-auth/
-│       └── index.html          # Patient registration iframe
-│
-├── backend/
-│   ├── server.js               # Express server
-│   ├── config/
-│   │   └── db.js              # MongoDB connection
-│   ├── models/
-│   │   ├── User.js            # User schema
-│   │   ├── Patient.js         # Patient schema
-│   │   ├── Vital.js           # Vital signs schema
-│   │   └── Alert.js           # Alert schema
-│   ├── controllers/
-│   │   ├── authController.js
-│   │   ├── patientController.js
-│   │   ├── vitalController.js
-│   │   └── alertController.js
-│   ├── routes/
-│   │   ├── auth.js
-│   │   ├── patients.js
-│   │   ├── vitals.js
-│   │   └── alerts.js
-│   ├── middleware/
-│   │   ├── auth.js            # JWT authentication
-│   │   └── validate.js        # Request validation
-│   ├── utils/
-│   │   └── alerts.js          # Alert evaluation logic
-│   ├── .env                    # Environment variables
-│   └── package.json
-│
+├── index.html              # Main HTML file (frontend)
+├── styles.css              # Styling
+├── app.js                  # Frontend logic
+├── server.js               # Express server entry point
+├── config/
+│   └── db.js               # MongoDB connection
+├── models/
+│   ├── User.js             # User schema
+│   ├── Patient.js          # Patient schema
+│   ├── Vital.js            # Vital signs schema
+│   └── Alert.js            # Alert schema
+├── controllers/
+│   ├── authController.js
+│   ├── patientController.js
+│   ├── vitalController.js
+│   └── alertController.js
+├── routes/
+│   ├── auth.js
+│   ├── patients.js
+│   ├── vitals.js
+│   └── alerts.js
+├── middleware/
+│   ├── auth.js             # JWT authentication
+│   └── validate.js         # Request validation
+├── utils/
+│   └── alerts.js           # Alert evaluation logic
+├── .env                    # Environment variables
+├── package.json
 └── README.md
 ```
 
@@ -350,7 +320,7 @@ patient-vitals-tracker/
 
 - **JWT Authentication**: Secure token-based authentication
 - **Password Hashing**: bcrypt with salt rounds
-- **Role-Based Access Control**: Separate permissions for doctors and patients
+- **Role-Based Access Control**: Doctor-only access with patient data management
 - **Request Validation**: Joi schema validation for all API requests
 - **Rate Limiting**: Prevents brute force attacks (20 requests per 15 minutes)
 - **HTTPS Ready**: Configure SSL certificates for production

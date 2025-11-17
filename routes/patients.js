@@ -17,7 +17,7 @@ router.post('/', protect, authorizeRoles('doctor'), validateRequest({
 
 router.get('/', protect, authorizeRoles('doctor'), controller.getPatientsForDoctor);
 
-router.get('/:id', protect, controller.getPatientById);
+router.get('/:id', protect, authorizeRoles('doctor'), controller.getPatientById);
 router.put('/:id', protect, authorizeRoles('doctor'), controller.updatePatient);
 
 module.exports = router;

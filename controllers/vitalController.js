@@ -9,12 +9,9 @@ exports.addVital = async (req, res) => {
   const patient = await Patient.findById(data.patient);
   if (!patient) return res.status(404).json({ error: 'Patient not found' });
 
-  // If user is a doctor, must be the assigned doctor; if patient, must own it
-  if (req.user.role === 'doctor' && String(patient.doctor) !== String(req.user._id)) {
+  // Doctor must be assigned to this patient
+  if (String(patient.doctor) !== String(req.user._id)) {
     return res.status(403).json({ error: 'Doctor not assigned to this patient' });
-  }
-  if (req.user.role === 'patient' && String(req.user.patientRef)   !== String(patient._id)) {
-    return res.status(403).json({ error: 'You can only add vitals for your own patient record' });
   }
 
   const vital = new Vital({
@@ -48,13 +45,10 @@ exports.updateVital = async (req, res) => {
   const vital = await Vital.findById(req.params.id);
   if (!vital) return res.status(404).json({ error: 'Vital not found' });
 
-  // who can update? the recorder, assigned doctor, or patient
+  // Doctor must be assigned to this patient
   const patient = await Patient.findById(vital.patient);
-  if (req.user.role === 'doctor' && String(patient.doctor) !== String(req.user._id)) {
+  if (String(patient.doctor) !== String(req.user._id)) {
     return res.status(403).json({ error: 'Doctor not assigned to this patient' });
-  }
-  if (req.user.role === 'patient' && String(req.user.patientRef) !== String(patient._id)) {
-    return res.status(403).json({ error: 'Forbidden' });
   }
 
   Object.assign(vital, req.body);
@@ -68,10 +62,7 @@ exports.getVitalsForPatient = async (req, res) => {
   const patient = await Patient.findById(patientId);
   if (!patient) return res.status(404).json({ error: 'Patient not found' });
 
-  if (req.user.role === 'doctor' && String(patient.doctor) !== String(req.user._id)) {
-    return res.status(403).json({ error: 'Forbidden' });
-  }
-  if (req.user.role === 'patient' && String(req.user.patientRef) !== String(patient._id)) {
+  if (String(patient.doctor) !== String(req.user._id)) {
     return res.status(403).json({ error: 'Forbidden' });
   }
 
@@ -92,10 +83,7 @@ exports.statsForPatient = async (req, res) => {
   const patient = await Patient.findById(patientId);
   if (!patient) return res.status(404).json({ error: 'Patient not found' });
 
-  if (req.user.role === 'doctor' && String(patient.doctor) !== String(req.user._id)) {
-    return res.status(403).json({ error: 'Forbidden' });
-  }
-  if (req.user.role === 'patient' && String(req.user.patientRef) !== String(patient._id)) {
+  if (String(patient.doctor) !== String(req.user._id)) {
     return res.status(403).json({ error: 'Forbidden' });
   }
 
